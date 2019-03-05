@@ -1,6 +1,4 @@
-import os
-import re
-import csv
+import os, re, csv
 
 from qgis.PyQt.uic import loadUiType
 from qgis.PyQt.QtWidgets import QDialog, QAbstractItemView, QTableWidgetItem
@@ -26,11 +24,9 @@ class LayerSearchDialog(QDockWidget, FORM_CLASS):
         self.iface = iface
         self.canvas = iface.mapCanvas()
 
-        # self.setWindowFlags(Qt.WindowStaysOnTopHint)
         # Notify us when vector items ared added and removed in QGIS
         QgsProject.instance().layersAdded.connect(self.updateLayers)
         QgsProject.instance().layersRemoved.connect(self.updateLayers)
-
 
         self.doneButton.clicked.connect(self.closeDialog)
         self.stopButton.clicked.connect(self.killWorker)
@@ -39,21 +35,16 @@ class LayerSearchDialog(QDockWidget, FORM_CLASS):
         self.layerListComboBox.activated.connect(self.layerSelected)
         self.searchFieldComboBox.addItems(['<All Fields>'])
         self.maxResults = 1500
-        # self.resultsTable.setColumnCount(4)
-        # self.resultsTable.setColumnCount(2)
         self.resultsTable.setSortingEnabled(False)
-        # self.resultsTable.setHorizontalHeaderLabels(['Value','Layer','Field','Feature Id'])
-        # self.resultsTable.setHorizontalHeaderLabels(['Value','Data'])
         self.resultsTable.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.comparisonComboBox.addItems(['Like','Equals','Starts With'])
+        self.comparisonItems=['Like','Equals','Starts With']
+        self.comparisonComboBox.addItems(self.comparisonItems)
         self.resultsTable.itemSelectionChanged.connect(self.select_feature)
         self.worker = None
         self.findStringEdit.textChanged.connect(self.setSuggestionsSearch)
         self.autocompleteComboBox.setVisible(False)
         self.chooseType.addItems(['Predefined NGSC search','Choose from the Layer Panel'])
         self.chooseType.currentIndexChanged.connect(self.populateLayerListComboBox)  # populating information in the layer list from csv
-
-        # self.autocompleteComboBox.currentIndexChanged.connect(self.setValueToSearch)
         self.autocompleteComboBox.currentTextChanged.connect(self.setValueToSearch)  # event connected for setting value from drop down
         self.layerListComboBox.currentTextChanged.connect(self.selectedCSVLayerChange)   # call to method for loading the layer, only at drop down
 
@@ -83,7 +74,8 @@ class LayerSearchDialog(QDockWidget, FORM_CLASS):
             self.autocompleteComboBox.setVisible(True)
             fieldName= self.searchFieldComboBox.currentText()
             expr = QgsExpression('"'+str(fieldName)+'" ilike \'%%%s%%\'' %text)  #expression to perform like operatore from column.
-            selectedLayer = self.layerListComboBox.currentIndex()
+            # selectedLayer = self.layerListComboBox.currentIndex()
+            selectedLayer = self.layerListComboBox.currentText()
             layers = [self.searchLayers[selectedLayer]]
             it = layers[0].getFeatures(QgsFeatureRequest(expr))
             ids = [i[fieldName] for i in it]
@@ -150,15 +142,21 @@ class LayerSearchDialog(QDockWidget, FORM_CLASS):
         and loads only layers that are required at that time.
     """
     def selectedCSVLayerChange(self,text):
+        print (text)
         # iterating through csv to get path, and load only vector layer that is required
         with open(os.path.join(os.path.dirname(__file__), 'data.csv')) as csvfile:
             reader= csv.reader(csvfile,delimiter=",")
             for i,row in enumerate(reader):
                     if row[0]==text:
+                        print (row[0])
                         # index based searching and accessing of data for vector layer.
                         qgisveclayer=QgsVectorLayer(os.path.join(row[3]), row[1].lower(), "ogr")
-                        if qgisveclayer.name() not in [lyr.name() for lyr in self.searchLayers]:
-                            self.searchLayers.append(qgisveclayer)
+
+
+                        # if qgisveclayer not in self.searchLayers:
+                        # self.searchLayers.append(qgisveclayer)
+                        self.searchLayers[row[0]]= qgisveclayer
+                        print (self.searchLayers)
 
     def populateLayerListComboBox(self):
         '''Find all the vector layers and add them to the layer list
@@ -166,7 +164,7 @@ class LayerSearchDialog(QDockWidget, FORM_CLASS):
         layers or all selected layers.'''
         # layerlist = ['<All Layers>','<Selected Layers>']
         layerlist=[]
-        self.searchLayers = [] # This is same size as layerlist
+        self.searchLayers = {} # This is same size as layerlist
 
         # getting current index from choices, if type index=0 that means, it is
         # refering to the data from csv else from layer panel
@@ -179,16 +177,14 @@ class LayerSearchDialog(QDockWidget, FORM_CLASS):
                         layerlist.append(row[0])
 
         else:
-            # if from layer panel option is selected
-            # clearing the table
-            # self.resultsTable.clear()
-            # self.resultsTable.setRowCount(0)
+
             # reading through all the layers in the layer panel
             layers = QgsProject.instance().mapLayers().values()
             for layer in layers:
                 if layer.type() == QgsMapLayer.VectorLayer:
                     layerlist.append(layer.name())
-                    self.searchLayers.append(layer)
+                    # self.searchLayers.append(layer)
+                    self.searchLayers[layer.name()]= layer
 
 
         self.layerListComboBox.clear()
@@ -197,7 +193,7 @@ class LayerSearchDialog(QDockWidget, FORM_CLASS):
 
     """
         This method updates the structure of the plugin, and
-        defines the number of c0lumns and header values for the columns,
+        defines the number of columns and header values for the columns,
         from the values in data.csv provided.
 
     """
@@ -209,13 +205,13 @@ class LayerSearchDialog(QDockWidget, FORM_CLASS):
             self.display_field_list=[]
             return
         if type_index==0:  # show column from the csv's column
-            # self.resultsTable.clear()
-            # self.resultsTable.setRowCount(0)
+
             self.display_field_list=display_field.split("^^") #use ^^ as seperator as failsafe
             self.resultsTable.setColumnCount(len(self.display_field_list))
             self.resultsTable.setHorizontalHeaderLabels(self.display_field_list)
         else:  # for layers from layer panel, it will show all the columns.
-            selectedLayer = self.layerListComboBox.currentIndex()
+            # selectedLayer = self.layerListComboBox.currentIndex()
+            selectedLayer = self.layerListComboBox.currentText()
             self.searchFieldComboBox.setEnabled(True)
             for field in self.searchLayers[selectedLayer].fields():
                 self.searchFieldComboBox.addItem(field.name())
@@ -241,13 +237,20 @@ class LayerSearchDialog(QDockWidget, FORM_CLASS):
                         self.searchString.setText(row[4])
                         self.updateTableStructure(row[5])
 
+                        # setting default index for the comparison from csv
+                        for i,comItemms in enumerate(self.comparisonItems):
+                            if comItemms==row[6]:
+                                self.comparisonComboBox.setCurrentIndex(i)
+
+
         else:
             display_field_list_temp=[]
-            selectedLayer = self.layerListComboBox.currentIndex()
+            # selectedLayer = self.layerListComboBox.currentIndex()
+            selectedLayer = self.layerListComboBox.currentText()
             # self.searchString.setVisible(False)
             self.searchString.setText("Note")
             self.searchFieldComboBox.addItem('<All Fields>')
-            if selectedLayer >= 0:
+            if  self.layerListComboBox.currentIndex() >= 0:
                 self.searchFieldComboBox.setEnabled(True)
                 for field in self.searchLayers[selectedLayer].fields():
                     # self.searchFieldComboBox.addItem(field.name())
@@ -260,7 +263,8 @@ class LayerSearchDialog(QDockWidget, FORM_CLASS):
 
     def runSearch(self):
         '''Called when the user pushes the Search button'''
-        selectedLayer = self.layerListComboBox.currentIndex()
+        # selectedLayer = self.layerListComboBox.currentIndex()
+        selectedLayer = self.layerListComboBox.currentText()
         comparisonMode = self.comparisonComboBox.currentIndex()
         self.noSelection = True
         try:
@@ -270,16 +274,7 @@ class LayerSearchDialog(QDockWidget, FORM_CLASS):
             return
 
         type_index=self.chooseType.currentIndex()
-        # if str == '':
-        #     self.showErrorMessage('Search string is empty')
-        #     return
-        # if selectedLayer == 0:
-        #     # Include all vector layers
-        #     layers = QgsProject.instance().mapLayers().values()
-        # elif selectedLayer == 1:
-        #     # Include all selected vector layers
-        #     layers = self.iface.layerTreeView().selectedLayers()
-        # else:
+
             # Only search on the selected vector layer
         layers = [self.searchLayers[selectedLayer]]
         self.vlayers=[]
@@ -304,12 +299,7 @@ class LayerSearchDialog(QDockWidget, FORM_CLASS):
                 infield = self.searchFieldComboBox.currentIndex() >= 1
         else:
             infield = self.searchFieldComboBox.currentIndex() >= 0
-        # infield = self.searchFieldComboBox.currentIndex()
-        # if infield is True:
 
-        # else:
-            # selectedField = None
-        # print ("selected field", selectedField)
         # Because this could take a lot of time, set up a separate thread
         # for a worker function to do the searching.
         thread = QThread()
