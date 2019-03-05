@@ -356,7 +356,7 @@ class LayerSearchDialog(QDockWidget, FORM_CLASS):
         self.noSelection = True
         self.found = 0
         self.results = []
-        # self.resultsTable.setRowCount(0)  # This removes the results from the table of records
+        self.resultsTable.setRowCount(0)  # This removes the results from the table of records
         self.noSelection = False
 
     def addFoundItem(self, layer, feature, attrname, value):
