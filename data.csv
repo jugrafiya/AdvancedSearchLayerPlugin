@@ -1,0 +1,2 @@
+Find River by Name,Parcel,nam,F:\Projects\QGIS-Search\resources\rivers.shp,Type in the River and Get the values,cat^^NAM^^F_CODEDESC^^F_CODE,Like
+Find Airport by Name,Property,all fields,F:\Projects\QGIS-Search\resources\airports.shp,Search Within Aiports,,Like
