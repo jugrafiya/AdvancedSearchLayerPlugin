@@ -1,10 +1,9 @@
 import os
-import csv
 
 from qgis.PyQt.QtCore import QUrl
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
-from PyQt5.QtCore  import Qt
+from PyQt5.QtCore import Qt
 
 from .searchDialog import LayerSearchDialog
 

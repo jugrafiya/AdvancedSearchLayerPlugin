@@ -6,8 +6,7 @@ from qgis.PyQt.QtCore import QThread
 
 from qgis.core import QgsVectorLayer, Qgis, QgsProject, QgsMapLayer, QgsExpression, QgsFeatureRequest
 from PyQt5.QtCore import Qt, QSettings
-from PyQt5.QtWidgets import *
-from PyQt5.Qt import QStringListModel
+from PyQt5.QtWidgets import QDockWidget
 
 from .searchWorker import Worker
 
@@ -148,15 +147,12 @@ class LayerSearchDialog(QDockWidget, FORM_CLASS):
             reader= csv.reader(csvfile,delimiter=",")
             for i,row in enumerate(reader):
                     if row[0]==text:
-                        print (row[0])
+
                         # index based searching and accessing of data for vector layer.
-                        qgisveclayer=QgsVectorLayer(os.path.join(row[3]), row[1].lower(), "ogr")
-
-
-                        # if qgisveclayer not in self.searchLayers:
-                        # self.searchLayers.append(qgisveclayer)
-                        self.searchLayers[row[0]]= qgisveclayer
-                        print (self.searchLayers)
+                        qgisveclayer=QgsVectorLayer(os.path.normpath(row[3]), 'NGSC Search - ' + row[1].strip(), "ogr")
+                        if row[0] not in self.searchLayers:
+                            self.searchLayers[row[0]]= qgisveclayer
+                        # print (self.searchLayers)
 
     def populateLayerListComboBox(self):
         '''Find all the vector layers and add them to the layer list
@@ -227,7 +223,7 @@ class LayerSearchDialog(QDockWidget, FORM_CLASS):
         type_index=self.chooseType.currentIndex()
 
         if type_index==0:
-
+            self.display_field_list_temp=[]
             selectedLayer = self.layerListComboBox.currentText()
             with open(os.path.join(os.path.dirname(__file__), 'data.csv')) as csvfile:
                 reader= csv.reader(csvfile,delimiter=",")
@@ -235,7 +231,8 @@ class LayerSearchDialog(QDockWidget, FORM_CLASS):
                     if row[0]==selectedLayer:
                         self.searchFieldComboBox.addItem(row[2])
                         self.searchString.setText(row[4])
-                        self.updateTableStructure(row[5])
+                        self.display_field_list_temp=row[5].split(",")
+                        # self.updateTableStructure(row[5])
 
                         # setting default index for the comparison from csv
                         for i,comItemms in enumerate(self.comparisonItems):
@@ -244,7 +241,7 @@ class LayerSearchDialog(QDockWidget, FORM_CLASS):
 
 
         else:
-            display_field_list_temp=[]
+            self.display_field_list_temp=[]
             # selectedLayer = self.layerListComboBox.currentIndex()
             selectedLayer = self.layerListComboBox.currentText()
             # self.searchString.setVisible(False)
@@ -254,16 +251,19 @@ class LayerSearchDialog(QDockWidget, FORM_CLASS):
                 self.searchFieldComboBox.setEnabled(True)
                 for field in self.searchLayers[selectedLayer].fields():
                     # self.searchFieldComboBox.addItem(field.name())
-                    display_field_list_temp.append(field.name())
+                    self.display_field_list_temp.append(field.name())
 
             else:
                 self.searchFieldComboBox.setCurrentIndex(0)
                 self.searchFieldComboBox.setEnabled(False)
-            self.updateTableStructure(",".join(display_field_list_temp))
+            # self.updateTableStructure(",".join(display_field_list_temp))
 
     def runSearch(self):
         '''Called when the user pushes the Search button'''
         # selectedLayer = self.layerListComboBox.currentIndex()
+        self.updateTableStructure(",".join(self.display_field_list_temp))
+
+
         selectedLayer = self.layerListComboBox.currentText()
         comparisonMode = self.comparisonComboBox.currentIndex()
         self.noSelection = True
@@ -356,7 +356,12 @@ class LayerSearchDialog(QDockWidget, FORM_CLASS):
         # if columns are specified for display in csv file, then it will get their values in loop and assign them
         if len(self.display_field_list)>0:
             for index, field_name in enumerate(self.display_field_list):
-                self.resultsTable.setItem(self.found, index, QTableWidgetItem(str(feature[field_name]))) # iterate through feature and get it's attributes
+                # print (type(feature[field_name]))
+                field_value=str(feature[field_name])
+                if 'QDate' in field_value:
+                    field_value=feature[field_name].toString('MMMM d, yyyy')
+
+                self.resultsTable.setItem(self.found, index, QTableWidgetItem(field_value)) # iterate through feature and get it's attributes
         else:
             # setting default values if no display columns are specified
             self.resultsTable.setItem(self.found, 0, QTableWidgetItem(value))

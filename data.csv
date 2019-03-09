@@ -1,4 +1,4 @@
-Find River by Name,Parcel,nam,F:\Projects\QGIS-Search\resources\rivers.shp,Type in the River and Get the values,cat^^NAM^^F_CODEDESC^^F_CODE,Like
+Find River by Name,Parcel,nam,F:\Projects\QGIS-Search\resources\rivers.shp,Type in the River and Get the values,cat^^NAM^^F_CODEDESC^^F_CODE^^testdate,Like
 Find Airport by Name,Property,all fields,F:\Projects\QGIS-Search\resources\airports.shp,Search Within Aiports,,Equals
 Find River by Namex,Parcel2,nam,F:\Projects\QGIS-Search\resources\rivers.shp,Type in the River and Get the X values,,Like
 Find River by NameY,Parcel3,nam,F:\Projects\QGIS-Search\resources\rivers.shp,Type in the River and Get the Y values,cat^^NAM^^F_CODEDESC^^F_CODE,Equals
